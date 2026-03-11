@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Index</title>
+    <script>
+        // Function for input validation
+        function validateInput(input) {
+            const regex = /^[a-zA-Z0-9]*$/; // Example regex for alphanumeric characters
+            return regex.test(input);
+        }
+
+        // Example CORS protection
+        // (should be configured on server-side)
+        const allowedOrigins = ['https://yourdomain.com'];
+        if(!allowedOrigins.includes(window.location.origin)) {
+            throw new Error('CORS policy: No Access');
+        }
+
+        // Example rate limiting logic (client-side)
+        let requestCount = 0;
+        const limit = 100; // max requests
+        function rateLimit() {
+            requestCount++;
+            if (requestCount > limit) {
+                alert('Rate limit exceeded. Retry later.');
+                throw new Error('Rate limit exceeded.');
+            }
+        }
+
+        // Example XSS prevention
+        function preventXSS(content) {
+            const element = document.createElement('div');
+            element.innerText = content; // escape user input
+            return element.innerHTML;
+        }
+    </script>
+</head>
+<body>
+    <h1>Hello, Secure World!</h1>
+</body>
+</html>
