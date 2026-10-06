@@ -1,10 +1,23 @@
 class DownloaderService:
-    """Backend placeholder service for future TikTok processing logic."""
+    """Service placeholder for future TikTok video processing.
+
+    Stage 2: Foundation only.
+    Stage 3 will add real video inspection and download logic.
+    """
 
     async def inspect(self, url: str) -> dict:
+        """Inspect video metadata from a TikTok URL.
+
+        Args:
+            url: TikTok video URL
+
+        Returns:
+            Dictionary with video metadata.
+            Currently returns a scaffold response.
+        """
         return {
-            "status": "not_ready",
-            "message": "Downloader service not implemented yet.",
+            "status": "scaffold",
+            "message": "Backend Stage 2 is active. Real video inspection will be implemented in Stage 3.",
             "url": url,
             "title": None,
             "author": None,
@@ -13,8 +26,17 @@ class DownloaderService:
         }
 
     async def download(self, url: str) -> dict:
+        """Request a download for a TikTok video.
+
+        Args:
+            url: TikTok video URL
+
+        Returns:
+            Dictionary with download status.
+            Currently returns a scaffold response.
+        """
         return {
-            "status": "not_ready",
-            "message": "Download service not implemented yet.",
+            "status": "scaffold",
+            "message": "Backend Stage 2 is active. Real download handling will be implemented in Stage 3.",
             "url": url,
         }
