@@ -19,8 +19,16 @@ const ui = {
 };
 
 function validateInput(url) {
-  const pattern = /^(https?:\/\/)?(www\.)?(tiktok\.com)(\/.*)?$/i;
-  return pattern.test(url.trim());
+  if (!url || typeof url !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url.trim());
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
 }
 
 function setStatus(level, message) {
@@ -73,18 +81,6 @@ function updateViewState(operation, isRunning) {
 function resetInfoPanels() {
   ui.videoInfo.textContent = 'No video inspected yet.';
   ui.videoInfo.classList.add('empty-state');
-
-  ui.formatList.innerHTML = '<li class="empty-item">No formats available yet.<\/li>';
-}
-
-function showBackendNotConnected(operationName) {
-  const message = `Backend not connected yet. The ${operationName} endpoint is not available until the backend is implemented.`;
-
-  setProgress('Waiting for backend connectivity.');
-  setStatus('neutral', 'Backend not connected yet.');
-  setError('Backend not connected yet.');
-  ui.videoInfo.textContent = message;
-  ui.videoInfo.classList.remove('empty-state');
   ui.formatList.innerHTML = '<li class="empty-item">No formats available yet.<\/li>';
 }
 
@@ -97,10 +93,10 @@ function renderVideoInfo(videoData) {
 
   const rows = [
     ['Title', videoData.title || 'Unknown'],
-    ['Author', videoData.author || 'Unknown'],
-    ['URL', videoData.url || 'Not provided'],
-    ['Duration', videoData.duration || 'Not provided'],
-    ['Status', videoData.status || 'Ready']
+    ['Uploader', videoData.uploader || 'Unknown'],
+    ['URL', videoData.webpage_url || videoData.url || 'Not provided'],
+    ['Duration', videoData.duration ?? 'Not provided'],
+    ['Extractor', videoData.extractor || 'Unknown']
   ];
 
   const container = document.createElement('dl');
@@ -122,7 +118,7 @@ function renderVideoInfo(videoData) {
 }
 
 function renderFormats(formats) {
-  const items = Array.isArray(formats) && formats.length ? formats : [];
+  const items = Array.isArray(formats) ? formats : [];
 
   if (!items.length) {
     ui.formatList.innerHTML = '<li class="empty-item">No formats available yet.<\/li>';
@@ -134,10 +130,14 @@ function renderFormats(formats) {
     item.className = 'format-item';
 
     const quality = document.createElement('strong');
-    quality.textContent = format.quality || 'Unknown quality';
+    quality.textContent = format.resolution || format.ext || format.format_id || 'Unknown quality';
 
     const details = document.createElement('span');
-    details.textContent = format.label || format.type || 'Format information unavailable';
+    const parts = [];
+    if (format.ext) parts.push(format.ext);
+    if (format.fps) parts.push(`${format.fps}fps`);
+    if (format.filesize) parts.push(`${Math.round(format.filesize / 1024)} KB`);
+    details.textContent = parts.length ? parts.join(' • ') : 'Format information unavailable';
 
     item.append(quality, details);
     return item;
@@ -151,20 +151,22 @@ async function inspectVideoInfo() {
   const url = ui.videoUrl.value.trim();
 
   if (!url) {
-    setError('Please enter a TikTok URL.');
+    setError('Please enter a URL.');
     setStatus('neutral', 'A URL is required.');
     return;
   }
 
   if (!validateInput(url)) {
-    setError('Please enter a valid TikTok URL.');
+    setError('Please enter a valid http or https URL.');
     setStatus('neutral', 'URL validation failed.');
     return;
   }
 
   if (!API_CONFIG.baseUrl) {
     updateViewState('inspect', true);
-    showBackendNotConnected('inspect');
+    setProgress('Backend not connected.');
+    setStatus('neutral', 'Backend not connected yet.');
+    setError('Backend not connected yet.');
     updateViewState('inspect', false);
     return;
   }
@@ -175,12 +177,8 @@ async function inspectVideoInfo() {
   setProgress('Waiting for backend metadata response.');
 
   try {
-    const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.inspect}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url })
+    const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.inspect}?url=${encodeURIComponent(url)}`, {
+      method: 'GET'
     });
 
     if (!response.ok) {
@@ -188,15 +186,19 @@ async function inspectVideoInfo() {
     }
 
     const payload = await response.json();
-    renderVideoInfo(payload.video || payload);
-    renderFormats(payload.formats || []);
+    if (!payload.success) {
+      throw new Error(payload.error?.message || 'Backend returned an error.');
+    }
+
+    renderVideoInfo(payload.video || null);
+    renderFormats(payload.video?.formats || []);
     setStatus('success', 'Video information loaded successfully.');
     setProgress('Metadata received from the backend.');
     setError('');
   } catch (error) {
     renderVideoInfo(null);
     renderFormats([]);
-    setStatus('neutral', 'Backend not connected yet.');
+    setStatus('neutral', 'Backend request failed.');
     setError(error.message || 'Unable to inspect the video right now.');
     setProgress('The backend is not available yet.');
   } finally {
@@ -208,20 +210,22 @@ async function downloadVideo() {
   const url = ui.videoUrl.value.trim();
 
   if (!url) {
-    setError('Please enter a TikTok URL before downloading.');
+    setError('Please enter a URL before downloading.');
     setStatus('neutral', 'A URL is required.');
     return;
   }
 
   if (!validateInput(url)) {
-    setError('Please enter a valid TikTok URL.');
+    setError('Please enter a valid http or https URL.');
     setStatus('neutral', 'URL validation failed.');
     return;
   }
 
   if (!API_CONFIG.baseUrl) {
     updateViewState('download', true);
-    showBackendNotConnected('download');
+    setProgress('Backend not connected.');
+    setStatus('neutral', 'Download is not available yet.');
+    setError('Backend not connected yet.');
     updateViewState('download', false);
     return;
   }
@@ -229,7 +233,7 @@ async function downloadVideo() {
   updateViewState('download', true);
   setError('');
   setStatus('neutral', 'Preparing download request...');
-  setProgress('Waiting for backend confirmation before starting a download.');
+  setProgress('Download is intentionally not implemented in Stage 3.');
 
   try {
     const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.download}`, {
@@ -245,14 +249,15 @@ async function downloadVideo() {
     }
 
     const payload = await response.json();
-
-    if (!payload || payload.status !== 'ready') {
-      throw new Error('The backend did not confirm a valid download.');
+    if (payload && payload.success === false) {
+      setStatus('neutral', 'Download is not available in this stage.');
+      setError(payload.error?.message || 'Download is not implemented yet.');
+      setProgress('Actual media downloading is intentionally not implemented in Stage 3.');
+      return;
     }
 
-    setStatus('success', 'Download request accepted by the backend.');
-    setProgress('The backend confirmed readiness. Real download handling will occur after backend implementation.');
-    setError('');
+    setStatus('neutral', 'Download is not available in this stage.');
+    setError('Real download functionality is not yet implemented.');
   } catch (error) {
     setStatus('neutral', 'Download is not available yet.');
     setError(error.message || 'Download is currently unavailable.');
@@ -270,6 +275,6 @@ ui.form.addEventListener('submit', (event) => {
 });
 
 resetInfoPanels();
-setStatus('neutral', 'Ready for a TikTok URL.');
+setStatus('neutral', 'Ready for a URL.');
 setError('');
-setProgress('No active progress. Progress will appear when the future backend is connected.');
+setProgress('No active progress.');
