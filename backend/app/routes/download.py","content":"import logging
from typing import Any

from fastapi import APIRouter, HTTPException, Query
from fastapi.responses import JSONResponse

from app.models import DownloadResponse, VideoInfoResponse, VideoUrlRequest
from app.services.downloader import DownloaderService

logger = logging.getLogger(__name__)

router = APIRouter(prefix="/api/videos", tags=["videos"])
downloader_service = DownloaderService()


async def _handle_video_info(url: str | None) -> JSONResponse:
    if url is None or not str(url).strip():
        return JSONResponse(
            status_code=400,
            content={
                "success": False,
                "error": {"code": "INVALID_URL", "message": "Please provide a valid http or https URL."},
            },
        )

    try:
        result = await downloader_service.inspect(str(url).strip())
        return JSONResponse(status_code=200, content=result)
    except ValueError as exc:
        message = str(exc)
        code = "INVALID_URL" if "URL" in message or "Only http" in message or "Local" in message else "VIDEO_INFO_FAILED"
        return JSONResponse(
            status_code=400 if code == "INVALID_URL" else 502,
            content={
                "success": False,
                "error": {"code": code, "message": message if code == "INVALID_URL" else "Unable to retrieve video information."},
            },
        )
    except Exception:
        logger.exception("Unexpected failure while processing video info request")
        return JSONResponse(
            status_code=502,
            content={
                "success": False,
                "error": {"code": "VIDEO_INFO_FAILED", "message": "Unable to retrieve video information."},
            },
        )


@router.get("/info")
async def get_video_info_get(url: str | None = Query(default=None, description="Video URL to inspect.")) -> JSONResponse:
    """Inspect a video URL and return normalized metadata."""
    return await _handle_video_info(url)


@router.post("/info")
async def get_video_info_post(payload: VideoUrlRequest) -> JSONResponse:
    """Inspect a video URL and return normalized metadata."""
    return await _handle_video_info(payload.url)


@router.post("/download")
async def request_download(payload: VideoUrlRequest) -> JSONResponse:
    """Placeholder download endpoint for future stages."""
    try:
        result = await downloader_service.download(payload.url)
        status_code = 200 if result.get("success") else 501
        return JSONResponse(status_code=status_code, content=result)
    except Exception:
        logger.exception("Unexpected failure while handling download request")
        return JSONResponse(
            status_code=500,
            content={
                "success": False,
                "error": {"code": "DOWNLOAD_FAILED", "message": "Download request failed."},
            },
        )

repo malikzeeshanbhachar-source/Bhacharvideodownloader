@@ -1,0 +1,145 @@
+import logging
+from typing import Any
+from urllib.parse import urlparse
+
+import yt_dlp
+
+logger = logging.getLogger(__name__)
+
+
+class DownloaderService:
+    """Service for real video metadata extraction using yt-dlp."""
+
+    @staticmethod
+    def validate_url(url: str) -> str:
+        """Validate that the URL is usable for metadata extraction."""
+        if url is None or not isinstance(url, str):
+            raise ValueError("URL is required.")
+
+        candidate = url.strip()
+        if not candidate:
+            raise ValueError("URL is required.")
+
+        parsed = urlparse(candidate)
+        if parsed.scheme.lower() not in {"http", "https"}:
+            raise ValueError("Only http and https URLs are supported.")
+
+        if not parsed.netloc:
+            raise ValueError("Malformed URL.")
+
+        hostname = (parsed.hostname or "").lower()
+        if not hostname:
+            raise ValueError("Malformed URL.")
+
+        blocked_hosts = {
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "::1",
+            "[::1]",
+            "localhost.localdomain",
+        }
+
+        if hostname in blocked_hosts or hostname.endswith(".local"):
+            raise ValueError("Local or internal URLs are not allowed.")
+
+        return candidate
+
+    @staticmethod
+    def _normalize_format(entry: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(entry, dict):
+            return {}
+
+        width = entry.get("width")
+        height = entry.get("height")
+        resolution = None
+        if width and height:
+            resolution = f"{width}x{height}"
+
+        filesize = entry.get("filesize") or entry.get("filesize_approx")
+        if isinstance(filesize, str):
+            try:
+                filesize = int(filesize)
+            except ValueError:
+                filesize = None
+
+        acodec = entry.get("acodec")
+        vcodec = entry.get("vcodec")
+        has_video = bool(vcodec not in (None, "none") or width or height)
+        has_audio = bool(acodec not in (None, "none") or entry.get("audio_ext") is not None)
+
+        return {
+            "format_id": entry.get("format_id"),
+            "ext": entry.get("ext"),
+            "resolution": resolution,
+            "fps": entry.get("fps"),
+            "filesize": filesize,
+            "has_video": has_video,
+            "has_audio": has_audio,
+        }
+
+    @staticmethod
+    def _normalize_formats(formats: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not isinstance(formats, list):
+            return []
+
+        normalized: list[dict[str, Any]] = []
+        for item in formats:
+            normalized_item = DownloaderService._normalize_format(item)
+            if normalized_item:
+                normalized.append(normalized_item)
+        return normalized[:25]
+
+    async def inspect(self, url: str) -> dict[str, Any]:
+        """Inspect metadata for a video URL using yt-dlp without downloading the media."""
+        validated_url = self.validate_url(url)
+
+        ydl_options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "extract_flat": False,
+            "noplaylist": True,
+            "ignore_no_formats_error": True,
+            "no_color": True,
+            "socket_timeout": 15,
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_options) as ydl:
+                info = ydl.extract_info(validated_url, download=False)
+        except yt_dlp.utils.DownloadError as exc:  # pragma: no cover - covered by route-level tests
+            logger.exception("yt-dlp download failure while extracting metadata")
+            raise ValueError("Unable to retrieve video information.") from exc
+        except yt_dlp.utils.YoutubeDLError as exc:
+            logger.exception("yt-dlp extraction error while fetching metadata")
+            raise ValueError("Unable to retrieve video information.") from exc
+        except Exception as exc:  # pragma: no cover - should be converted to safe error
+            logger.exception("Unexpected error while fetching video metadata")
+            raise ValueError("Unable to retrieve video information.") from exc
+
+        if not isinstance(info, dict):
+            raise ValueError("Unable to retrieve video information.")
+
+        video_info = {
+            "id": info.get("id"),
+            "title": info.get("title"),
+            "uploader": info.get("uploader") or info.get("channel") or info.get("creator"),
+            "duration": info.get("duration"),
+            "thumbnail": info.get("thumbnail"),
+            "webpage_url": info.get("webpage_url") or info.get("original_url") or validated_url,
+            "extractor": info.get("extractor"),
+            "formats": self._normalize_formats(info.get("formats") or []),
+        }
+
+        return {"success": True, "video": video_info}
+
+    async def download(self, url: str) -> dict[str, Any]:
+        """Stage 3 intentionally does not implement actual downloading."""
+        return {
+            "success": False,
+            "error": {
+                "code": "DOWNLOAD_NOT_IMPLEMENTED",
+                "message": "Download functionality is not implemented in Stage 3.",
+            },
+        }

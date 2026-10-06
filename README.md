@@ -1,37 +1,11 @@
-# BhacharVideoDownloader
+# Changelog
 
-A simple, practical and maintainable web-based video downloader project.
-
-**Project Name:** BhacharVideoDownloader  
-**Author:** Malik Zeeshan Bhachar  
-**Status:** Initial development
-
----
-
-# 1. Project Purpose
-
-BhacharVideoDownloader کا مقصد ایک ایسا سادہ اور قابلِ استعمال ویڈیو ڈاؤن لوڈر بنانا ہے جس میں صارف:
-
-1. ویڈیو کا URL paste کرے۔
-2. URL کی جانچ ہو۔
-3. ویڈیو کی بنیادی معلومات دیکھی جا سکیں۔
-4. دستیاب format/quality منتخب کی جا سکے۔
-5. ویڈیو یا جہاں مناسب ہو audio download کیا جا سکے۔
-6. اصل download progress دیکھی جا سکے۔
-7. download speed اور ETA دیکھی جا سکے۔
-8. کامیابی یا ناکامی کی واضح اطلاع ملے۔
-
-پروجیکٹ کا مقصد صرف خوبصورت interface بنانا نہیں بلکہ ایک حقیقی، قابلِ اعتماد اور maintainable application بنانا ہے۔
-
----
-
-# 2. Current Repository
-
-اس وقت repository کی بنیادی حالت:
-
-```text
-Bhacharvideodownloader/
-├── .github/
-│   └── workflows/
-├── README.md
-└── index.html
+## [Stage 3]
+- Added real yt-dlp metadata extraction using the Python API
+- Added backend URL validation for empty, malformed, unsupported, and local/internal URLs
+- Added normalized metadata and format models with safe output schema
+- Added `GET /api/videos/info?url=<URL>` and retained POST compatibility
+- Added structured error responses without exposing tracebacks
+- Added tests for validation and mocked metadata extraction
+- Updated the frontend to consume the real metadata endpoint shape
+- Updated project documentation to reflect the verified Stage 3 state
