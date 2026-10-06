@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BhacharVideoDownloader</title>
+    <meta
+      name="description"
+      content="Frontend foundation for downloading TikTok videos after backend integration."
+    />
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel" aria-labelledby="app-title">
+        <header class="panel-header">
+          <p class="eyebrow">BhacharVideoDownloader</p>
+          <h1 id="app-title">TikTok Video Downloader</h1>
+        </header>
+
+        <form id="downloadForm" class="download-form" novalidate>
+          <div class="field-group">
+            <label for="videoUrl">TikTok video URL</label>
+            <input
+              id="videoUrl"
+              name="videoUrl"
+              type="text"
+              inputmode="url"
+              placeholder="https://www.tiktok.com/@user/video/1234567890"
+              autocomplete="off"
+              aria-describedby="urlHelp"
+            />
+            <p id="urlHelp" class="field-help">
+              Client-side validation is only for UX. The backend must validate the final URL.
+            </p>
+          </div>
+
+          <div class="button-row">
+            <button id="inspectBtn" type="button" class="button secondary" data-action="inspect">
+              Get Video Info
+            </button>
+            <button id="downloadBtn" type="button" class="button primary" data-action="download">
+              Download
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="info-heading">
+        <h2 id="info-heading">Video information</h2>
+        <div id="videoInfo" class="data-block empty-state" aria-live="polite">
+          No video inspected yet.
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="formats-heading">
+        <h2 id="formats-heading">Available formats</h2>
+        <ul id="formatList" class="format-list" aria-live="polite">
+          <li class="empty-item">No formats available yet.</li>
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="progress-heading">
+        <h2 id="progress-heading">Progress</h2>
+        <p id="progress" class="progress-box" aria-live="polite">
+          No active progress. Progress will appear when the future backend is connected.
+        </p>
+      </section>
+
+      <section class="panel" aria-labelledby="messages-heading">
+        <h2 id="messages-heading">Status</h2>
+        <div id="statusMessage" class="status-box neutral" aria-live="polite">
+          Ready for a TikTok URL.
+        </div>
+        <div id="errorMessage" class="status-box error hidden" aria-live="assertive"></div>
+      </section>
+    </main>
+
+    <script src="./js/app.js"></script>
+  </body>
+</html>
